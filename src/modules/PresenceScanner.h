@@ -16,10 +16,11 @@
 namespace spd {
 
 // BLEScan::start() returns BLEScanResults by value on ESP32 Arduino core 2.x and
-// a pointer on 3.x. Normalise to a pointer so the scan code below is core-agnostic.
+// a pointer on 3.x. Bind the result to a local `auto` and pass it through here to
+// get a reference either way.
 namespace detail {
-inline BLEScanResults* asScanResults(BLEScanResults* p) { return p; }
-inline BLEScanResults* asScanResults(BLEScanResults& r) { return &r; }
+inline BLEScanResults& scanRef(BLEScanResults& r) { return r; }   // core 2.x: local value
+inline BLEScanResults& scanRef(BLEScanResults* p) { return *p; }  // core 3.x: pointer
 }  // namespace detail
 
 struct TagSighting {
@@ -41,9 +42,10 @@ class PresenceScanner {
   // Blocking scan for `seconds`; returns sightings sorted strongest-first.
   std::vector<TagSighting> scan(uint32_t seconds = 2) {
     std::vector<TagSighting> out;
-    BLEScanResults* r = detail::asScanResults(scan_->start(seconds, false));
-    for (int i = 0; i < r->getCount(); ++i) {
-      BLEAdvertisedDevice d = r->getDevice(i);
+    auto started = scan_->start(seconds, false);
+    BLEScanResults& r = detail::scanRef(started);
+    for (int i = 0; i < r.getCount(); ++i) {
+      BLEAdvertisedDevice d = r.getDevice(i);
       String name = d.haveName() ? String(d.getName().c_str()) : "";
       if (!name.startsWith(prefix_)) continue;
       out.push_back({ name.substring(prefix_.length()), d.getRSSI() });
