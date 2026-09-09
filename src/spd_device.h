@@ -99,6 +99,16 @@ class SmartPetDevice {
   void publishTelemetry(std::function<void(JsonObject&)> fill) { mqtt_.publishTelemetry(fill); }
   void publishPresence(const char* tagId, int rssi) { mqtt_.publishPresence(tagId, rssi); }
 
+  // GPS fix stream on kennel/{k}/gps/{id}/location. `fill` adds lat/lng and any
+  // extras (accuracy, speed, heading, battery) onto the envelope.
+  bool publishLocation(std::function<void(JsonObject&)> fill) {
+    JsonDocument doc;
+    mqtt_.envelope(doc);                 // deviceId / kennelId / timestamp
+    JsonObject o = doc.as<JsonObject>(); // view of the root, not a reset
+    if (fill) fill(o);
+    return mqtt_.publishJson("location", doc);
+  }
+
   // Report a physical action. Published as an event when online; journalled when not.
   void reportAction(const String& kind, float amount = 0) {
     if (mqtt_.connected()) {
