@@ -53,14 +53,20 @@ using the SDK; the old file is kept as `smart-feeder.legacy.cpp`).
 | `smart-water-dispenser` | `WaterModule` ready; sketch = feeder pattern with `dispense`/`start`/`stop` |
 | `gps-dog-collar` | move `dogs/{id}/…` → `kennel/{k}/gps/{id}/…`; use `dev("gps")`, publish `location`, keep adaptive intervals; `set_interval` built-in |
 | `pet-iot-sensors-service` devices | `EnvSensorModule` with DHT/SHT readers; publishes `temperature`/`humidity`/`airquality` leaves |
+| two-way-audio device | `TwoWayAudioModule` (I2S mic + amp); `dev.onAudioSignal()` on the `audio` leaf; `examples/audio` = door station. mu-law over UDP uplink + raw-PCM HTTP clip downlink. Full WebRTC stays in `pet-iot-camera-service` / the gateway. |
+
+`pio-ci` now takes `example-dir: examples`, so each env builds its own sketch
+(`door`/`scale`/`audio`), not always `examples/feeder`. `[esp32_base]` uses
+`min_spiffs.csv` — the `door` sketch (BLE + WiFi + MQTT) overflows the default
+partition.
 
 ## Open items before a device CI build — all resolved; CI is green
 
 - **CI matrix — done.** `.github/workflows/ci.yml` calls
-  `smart-pet-ci/pio-ci.yml`: `./test/run_native.sh` plus
-  `pio run -e feeder|door|scale`, PlatformIO cached. CI passes `PLATFORMIO_SRC_DIR`
-  per board (PlatformIO needs `src_dir` pointed at the sketch folder); the local
-  default is `examples/feeder`.
+  `smart-pet-ci/pio-ci.yml` with `example-dir: examples`: `./test/run_native.sh`
+  plus `pio run -e feeder|door|scale|audio`, each building its own sketch via
+  `PLATFORMIO_SRC_DIR`, PlatformIO cached. Local default is `examples/feeder`;
+  for the others set `PLATFORMIO_SRC_DIR=examples/<env>`.
 - **C++ standard — fixed.** `platform = espressif32 @ ^6.9.0` resolves to Arduino
   core 2.x (GCC 8.4), which defaults to gnu++11/14 and rejected the SDK headers'
   C++17 aggregate initialisers. `[esp32_base]` now `build_unflags` the old

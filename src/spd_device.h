@@ -32,6 +32,7 @@ namespace spd {
 using CommandFn = std::function<bool(JsonObjectConst params, const String& id)>;
 using ScheduledFn = std::function<void(float amount)>;
 using StatusFillFn = std::function<void(JsonObject& status)>;
+using AudioSignalFn = std::function<void(const String& kind, JsonObjectConst signal)>;
 
 class SmartPetDevice {
  public:
@@ -78,6 +79,9 @@ class SmartPetDevice {
   SmartPetDevice& onCommand(const String& name, CommandFn fn) { handlers_[name] = std::move(fn); return *this; }
   SmartPetDevice& onScheduledAction(ScheduledFn fn) { scheduled_ = std::move(fn); return *this; }
   SmartPetDevice& onStatusFill(StatusFillFn fn) { statusFill_ = std::move(fn); return *this; }
+  // Two-way-audio signals on kennel/{k}/{type}/{id}/audio:
+  // kind = offer|answer|ice|talk|play|stop (see camera-service AudioRelay).
+  SmartPetDevice& onAudioSignal(AudioSignalFn fn) { audioSignal_ = std::move(fn); return *this; }
   void setStatusInterval(uint32_t ms) { statusEveryMs_ = ms; }
 
   // ── outbound ─────────────────────────────────────────────────────────────
@@ -179,6 +183,10 @@ class SmartPetDevice {
   }
 
   void onMqtt(const String& topic, JsonObjectConst p) {
+    if (topic.endsWith("/audio")) {
+      if (audioSignal_) audioSignal_(String((const char*)(p["kind"] | "")), p);
+      return;
+    }
     if (!topic.endsWith("/command")) return;
     const char* command = p["command"] | "";
     String id = p["id"] | "";
@@ -290,6 +298,7 @@ class SmartPetDevice {
   std::map<String, CommandFn> handlers_;
   ScheduledFn scheduled_;
   StatusFillFn statusFill_;
+  AudioSignalFn audioSignal_;
 
   bool wasOnline_ = false;
   bool otaBegun_ = false;

@@ -2,6 +2,7 @@
 //   ./test/run_native.sh      (clang++/g++ -std=c++17, no Arduino, no PlatformIO)
 #include <cstdio>
 #include <cstdint>
+#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -9,6 +10,7 @@
 #include "../../src/spd_schedule.h"
 #include "../../src/spd_backoff.h"
 #include "../../src/spd_offline_journal.h"
+#include "../../src/spd_ulaw.h"
 
 static int g_fails = 0;
 static int g_checks = 0;
@@ -130,12 +132,35 @@ static void test_offline_journal() {
   CHECK(!restored.isOpen());
 }
 
+static void test_ulaw() {
+  SECTION("ulaw");
+  // round-trip stays close for a range of amplitudes (mu-law is lossy but monotonic)
+  for (int s = -32000; s <= 32000; s += 250) {
+    int16_t back = ulawDecode(ulawEncode((int16_t)s));
+    int err = std::abs((int)back - s);
+    CHECK(err <= (std::abs(s) / 8) + 260);   // ~mu-law step size
+  }
+  CHECK(ulawEncode(0) == 0xFF);              // silence
+  CHECK(std::abs((int)ulawDecode(ulawEncode(0))) <= 8);
+  // sign preserved
+  CHECK(ulawDecode(ulawEncode(-12345)) < 0);
+  CHECK(ulawDecode(ulawEncode(12345)) > 0);
+  // block helpers
+  int16_t pcm[4] = {0, 1000, -1000, 30000};
+  uint8_t u[4];
+  int16_t out[4];
+  ulawEncodeBlock(pcm, u, 4);
+  ulawDecodeBlock(u, out, 4);
+  CHECK(out[0] == ulawDecode(u[0]) && out[3] > 20000);
+}
+
 int main() {
   std::printf("smart-pet-device-sdk native tests\n");
   test_topics();
   test_schedule();
   test_backoff();
   test_offline_journal();
+  test_ulaw();
   std::printf("\n%d checks, %d failures\n", g_checks, g_fails);
   return g_fails == 0 ? 0 : 1;
 }

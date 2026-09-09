@@ -114,6 +114,7 @@ class MqttTransport {
       backoff_.reset();
       String cmd = base("command");
       mqtt_.subscribe(cmd.c_str(), 1);   // PubSubClient max granted QoS is 1
+      mqtt_.subscribe(base("audio").c_str(), 1);  // two-way-audio signalling
       Serial.printf("[mqtt] connected; sub %s\n", cmd.c_str());
     } else {
       Serial.printf("[mqtt] connect failed rc=%d\n", mqtt_.state());
