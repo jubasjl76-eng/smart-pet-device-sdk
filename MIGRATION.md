@@ -54,25 +54,27 @@ using the SDK; the old file is kept as `smart-feeder.legacy.cpp`).
 | `gps-dog-collar` | move `dogs/{id}/…` → `kennel/{k}/gps/{id}/…`; use `dev("gps")`, publish `location`, keep adaptive intervals; `set_interval` built-in |
 | `pet-iot-sensors-service` devices | `EnvSensorModule` with DHT/SHT readers; publishes `temperature`/`humidity`/`airquality` leaves |
 
-## Open items before a device CI build
+## Open items before a device CI build — all resolved; CI is green
 
-- **CI matrix — done.** `.github/workflows/ci.yml`: `./test/run_native.sh`
-  plus `pio run -e feeder|door|scale` on `ubuntu-latest`, PlatformIO cached.
-  `platformio.ini` now sets `src_dir = examples` with a per-env
-  `build_src_filter`, so `pio run -e door` builds `examples/door` (it was
-  always building the feeder before).
-- **`ESP32Servo` — resolved.** `FeederModule` / `DoorModule` include
-  `<ESP32Servo.h>` and use class `Servo`; `madhephaestus/ESP32Servo @ ^3.0.5`
-  is now in `lib_deps` and `library.json`.
+- **CI matrix — done.** `.github/workflows/ci.yml` calls
+  `smart-pet-ci/pio-ci.yml`: `./test/run_native.sh` plus
+  `pio run -e feeder|door|scale`, PlatformIO cached. CI passes `PLATFORMIO_SRC_DIR`
+  per board (PlatformIO needs `src_dir` pointed at the sketch folder); the local
+  default is `examples/feeder`.
+- **C++ standard — fixed.** `platform = espressif32 @ ^6.9.0` resolves to Arduino
+  core 2.x (GCC 8.4), which defaults to gnu++11/14 and rejected the SDK headers'
+  C++17 aggregate initialisers. `[esp32_base]` now `build_unflags` the old
+  standard and adds `-std=gnu++17`.
+- **`ESP32Servo` — resolved.** `madhephaestus/ESP32Servo @ ^3.0.5` added to
+  `lib_deps` and `library.json` (`FeederModule` / `DoorModule` include
+  `<ESP32Servo.h>`).
 - **HX711 — confirmed.** `bogde/HX711` ^0.7 is `begin(byte dout, byte sck,
   byte gain = 128)`, so `ScaleModule`'s `hx_.begin(dout_, sck_)` is correct.
-- **BLE core 2.x vs 3.x — mostly resolved.** `platform` is pinned to
-  `espressif32 @ ^6.9.0` (core 3.x), which is what `PresenceScanner` was
-  written against. `BLEScan::start()` returning value (2.x) vs pointer (3.x) is
-  now handled by `spd::detail::asScanResults`. The `door` example pulls
-  `PresenceScanner`, so the `pio run -e door` job exercises this path. If a
-  future core bump changes `BLEScanResults::getDevice()` (value vs pointer),
-  adjust it in that one spot.
+- **BLE core 2.x vs 3.x — handled.** Core 2.x's `BLEScan::start()` returns
+  `BLEScanResults` by value, 3.x returns a pointer. `PresenceScanner::scan()`
+  binds the result to `auto` and passes it through `spd::detail::scanRef`
+  (overloaded for value and pointer). The `door` example pulls `PresenceScanner`,
+  so `pio run -e door` exercises it.
 
 ## Still needs real hardware
 
