@@ -6,6 +6,8 @@ on:
 jobs:
   ci:
     uses: jubasjl76-eng/smart-pet-ci/.github/workflows/pio-ci.yml@main
-    # with:
-    #   environments: '["feeder","door","scale"]'
-    #   native-test-command: "./test/run_native.sh"
+    with:
+      # example-dir makes each env build examples/<env> (not always the feeder)
+      example-dir: examples
+      environments: '["feeder","door","scale","audio"]'
+      native-test-command: "./test/run_native.sh"

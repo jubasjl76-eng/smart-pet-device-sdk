@@ -31,6 +31,7 @@ Matches the TypeScript contract in **`smart-pet-mqtt`** exactly (`spd_topics.h` 
 | `ScaleModule` | HX711 load cell | bowl "eaten vs dispensed"; stable body-weight gate |
 | `PresenceScanner` | ESP32 BLE | strongest `spd-tag-*` advertiser → which dog is here (multi-dog id, wrong-pen) |
 | `EnvSensorModule` | any (lambdas) | temp/humidity/airquality metrics + door/motion edges |
+| `TwoWayAudioModule` | INMP441 mic + MAX98357A amp (I2S) | "talk to your dog": mu-law mic stream over UDP, raw-PCM HTTP clip player; signalling on the `audio` leaf |
 
 ## Quick start
 
@@ -51,7 +52,7 @@ void setup() {
 void loop() { dev.loop(); }
 ```
 
-Full sketches: [`examples/feeder`](examples/feeder), [`examples/door`](examples/door), [`examples/scale`](examples/scale).
+Full sketches: [`examples/feeder`](examples/feeder), [`examples/door`](examples/door), [`examples/scale`](examples/scale), [`examples/audio`](examples/audio) (door station + two-way audio).
 
 ## Build & test
 

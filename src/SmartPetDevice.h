@@ -26,3 +26,4 @@
 #include "modules/ScaleModule.h"
 #include "modules/PresenceScanner.h"
 #include "modules/EnvSensorModule.h"
+#include "modules/TwoWayAudioModule.h"
