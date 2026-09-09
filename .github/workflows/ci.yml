@@ -1,0 +1,11 @@
+name: CI
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+jobs:
+  ci:
+    uses: jubasjl76-eng/smart-pet-ci/.github/workflows/pio-ci.yml@main
+    # with:
+    #   environments: '["feeder","door","scale"]'
+    #   native-test-command: "./test/run_native.sh"

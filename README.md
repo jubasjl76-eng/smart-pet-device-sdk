@@ -1,5 +1,7 @@
 # smart-pet-device-sdk
 
+[![CI](https://github.com/jubasjl76-eng/smart-pet-device-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/jubasjl76-eng/smart-pet-device-sdk/actions/workflows/ci.yml)
+
 Shared ESP32 firmware base for Smart Pet devices. Firmware becomes a thin sketch:
 pick a module, register a couple of callbacks, call `dev.loop()`.
 
@@ -88,7 +90,9 @@ test/test_native/test_main.cpp
 
 ## Status
 
-The freestanding headers are covered by host tests. The Arduino layer follows
-ESP32 Arduino-core + PubSubClient + ArduinoJson v7 + HX711 conventions but has
-**not** been flashed/CI-built yet — see `MIGRATION.md` for the porting plan and
-the open items (BLE lib include names vary by core version; HX711 pin order).
+The freestanding headers are covered by host tests (`./test/run_native.sh`).
+CI (`.github/workflows/ci.yml`) also compiles the three examples for `esp32dev`
+(`pio run -e feeder|door|scale`) on every push and PR, against a pinned ESP32
+Arduino core 3.x. Not yet flashed on a physical board — `MIGRATION.md` lists
+what still needs real hardware (servo throw, HX711 calibration, NTP, captive
+portal, OTA).

@@ -11,7 +11,8 @@
   "dependencies": {
     "bblanchon/ArduinoJson": "^7.0.0",
     "knolleary/PubSubClient": "^2.8",
-    "bogde/HX711": "^0.7.5"
+    "bogde/HX711": "^0.7.5",
+    "madhephaestus/ESP32Servo": "^3.0.5"
   },
   "build": {
     "srcFilter": ["+<*>", "-<modules/ScaleModule.*>"],

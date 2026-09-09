@@ -54,9 +54,31 @@ using the SDK; the old file is kept as `smart-feeder.legacy.cpp`).
 | `gps-dog-collar` | move `dogs/{id}/…` → `kennel/{k}/gps/{id}/…`; use `dev("gps")`, publish `location`, keep adaptive intervals; `set_interval` built-in |
 | `pet-iot-sensors-service` devices | `EnvSensorModule` with DHT/SHT readers; publishes `temperature`/`humidity`/`airquality` leaves |
 
-## Open items before a device CI build
+## Open items before a device CI build — all resolved; CI is green
 
-- BLE include names differ across ESP32 Arduino core 2.x vs 3.x (`BLEDevice.h` path, `BLEScanResults*` vs value). `PresenceScanner` targets 3.x.
-- `ESP32Servo` vs core `Servo` — `library.json` pulls `ESP32Servo`; confirm on the target core.
-- HX711 constructor/`begin(dout, sck)` arg order matches `bogde/HX711` ^0.7.
-- Add a GitHub Actions matrix (`pio run -e feeder|door|scale`, `pio test -e native`).
+- **CI matrix — done.** `.github/workflows/ci.yml` calls
+  `smart-pet-ci/pio-ci.yml`: `./test/run_native.sh` plus
+  `pio run -e feeder|door|scale`, PlatformIO cached. CI passes `PLATFORMIO_SRC_DIR`
+  per board (PlatformIO needs `src_dir` pointed at the sketch folder); the local
+  default is `examples/feeder`.
+- **C++ standard — fixed.** `platform = espressif32 @ ^6.9.0` resolves to Arduino
+  core 2.x (GCC 8.4), which defaults to gnu++11/14 and rejected the SDK headers'
+  C++17 aggregate initialisers. `[esp32_base]` now `build_unflags` the old
+  standard and adds `-std=gnu++17`.
+- **`ESP32Servo` — resolved.** `madhephaestus/ESP32Servo @ ^3.0.5` added to
+  `lib_deps` and `library.json` (`FeederModule` / `DoorModule` include
+  `<ESP32Servo.h>`).
+- **HX711 — confirmed.** `bogde/HX711` ^0.7 is `begin(byte dout, byte sck,
+  byte gain = 128)`, so `ScaleModule`'s `hx_.begin(dout_, sck_)` is correct.
+- **BLE core 2.x vs 3.x — handled.** Core 2.x's `BLEScan::start()` returns
+  `BLEScanResults` by value, 3.x returns a pointer. `PresenceScanner::scan()`
+  binds the result to `auto` and passes it through `spd::detail::scanRef`
+  (overloaded for value and pointer). The `door` example pulls `PresenceScanner`,
+  so `pio run -e door` exercises it.
+
+## Still needs real hardware
+
+- A flash + run on an `esp32dev` board for each module (servo throw, HX711
+  calibration factor, NTP sync, captive-portal provisioning, OTA pull).
+- `pio test -e native` via PlatformIO is wired but `./test/run_native.sh` is the
+  canonical fast path and what CI runs.
