@@ -56,7 +56,27 @@ using the SDK; the old file is kept as `smart-feeder.legacy.cpp`).
 
 ## Open items before a device CI build
 
-- BLE include names differ across ESP32 Arduino core 2.x vs 3.x (`BLEDevice.h` path, `BLEScanResults*` vs value). `PresenceScanner` targets 3.x.
-- `ESP32Servo` vs core `Servo` — `library.json` pulls `ESP32Servo`; confirm on the target core.
-- HX711 constructor/`begin(dout, sck)` arg order matches `bogde/HX711` ^0.7.
-- Add a GitHub Actions matrix (`pio run -e feeder|door|scale`, `pio test -e native`).
+- **CI matrix — done.** `.github/workflows/ci.yml`: `./test/run_native.sh`
+  plus `pio run -e feeder|door|scale` on `ubuntu-latest`, PlatformIO cached.
+  `platformio.ini` now sets `src_dir = examples` with a per-env
+  `build_src_filter`, so `pio run -e door` builds `examples/door` (it was
+  always building the feeder before).
+- **`ESP32Servo` — resolved.** `FeederModule` / `DoorModule` include
+  `<ESP32Servo.h>` and use class `Servo`; `madhephaestus/ESP32Servo @ ^3.0.5`
+  is now in `lib_deps` and `library.json`.
+- **HX711 — confirmed.** `bogde/HX711` ^0.7 is `begin(byte dout, byte sck,
+  byte gain = 128)`, so `ScaleModule`'s `hx_.begin(dout_, sck_)` is correct.
+- **BLE core 2.x vs 3.x — mostly resolved.** `platform` is pinned to
+  `espressif32 @ ^6.9.0` (core 3.x), which is what `PresenceScanner` was
+  written against. `BLEScan::start()` returning value (2.x) vs pointer (3.x) is
+  now handled by `spd::detail::asScanResults`. The `door` example pulls
+  `PresenceScanner`, so the `pio run -e door` job exercises this path. If a
+  future core bump changes `BLEScanResults::getDevice()` (value vs pointer),
+  adjust it in that one spot.
+
+## Still needs real hardware
+
+- A flash + run on an `esp32dev` board for each module (servo throw, HX711
+  calibration factor, NTP sync, captive-portal provisioning, OTA pull).
+- `pio test -e native` via PlatformIO is wired but `./test/run_native.sh` is the
+  canonical fast path and what CI runs.

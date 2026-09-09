@@ -15,6 +15,13 @@
 
 namespace spd {
 
+// BLEScan::start() returns BLEScanResults by value on ESP32 Arduino core 2.x and
+// a pointer on 3.x. Normalise to a pointer so the scan code below is core-agnostic.
+namespace detail {
+inline BLEScanResults* asScanResults(BLEScanResults* p) { return p; }
+inline BLEScanResults* asScanResults(BLEScanResults& r) { return &r; }
+}  // namespace detail
+
 struct TagSighting {
   String tagId;
   int rssi;
@@ -34,7 +41,7 @@ class PresenceScanner {
   // Blocking scan for `seconds`; returns sightings sorted strongest-first.
   std::vector<TagSighting> scan(uint32_t seconds = 2) {
     std::vector<TagSighting> out;
-    BLEScanResults* r = scan_->start(seconds, false);
+    BLEScanResults* r = detail::asScanResults(scan_->start(seconds, false));
     for (int i = 0; i < r->getCount(); ++i) {
       BLEAdvertisedDevice d = r->getDevice(i);
       String name = d.haveName() ? String(d.getName().c_str()) : "";
