@@ -11,4 +11,3 @@ jobs:
       example-dir: examples
       environments: '["feeder","door","scale","audio"]'
       native-test-command: "pio test -e native -e native-san"
-      coverage-env: native-cov
