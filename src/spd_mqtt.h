@@ -124,6 +124,7 @@ class MqttTransport {
       String cmd = base("command");
       mqtt_.subscribe(cmd.c_str(), 1);   // PubSubClient max granted QoS is 1
       mqtt_.subscribe(base("audio").c_str(), 1);  // two-way-audio signalling
+      mqtt_.subscribe(controlTopic(cfg_.kennelId.c_str()).c_str(), 1);  // fleet kill switch (retained)
       Serial.printf("[mqtt] connected; sub %s\n", cmd.c_str());
     } else {
       Serial.printf("[mqtt] connect failed rc=%d\n", mqtt_.state());

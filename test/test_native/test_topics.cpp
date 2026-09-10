@@ -24,6 +24,14 @@ TEST(Topics, parseRejectsMalformed) {
   EXPECT_FALSE(parseTopic("kennel/home/feeder/f1/status/extra").valid);  // too many segments
 }
 
+TEST(Topics, controlChannel) {
+  EXPECT_EQ(controlTopic("home"), "kennel/home/_control");
+  // it's a real subtopic of the kennel, so a kennel-wide subscription covers it
+  EXPECT_TRUE(topicMatches("kennel/home/#", controlTopic("home")));
+  // ...but it is NOT a device topic
+  EXPECT_FALSE(parseTopic(controlTopic("home")).valid);
+}
+
 TEST(Topics, legacyDetection) {
   EXPECT_TRUE(isLegacyTopic("dogs/collar-01/location"));
   EXPECT_TRUE(isLegacyTopic("devices/x/telemetry/y"));

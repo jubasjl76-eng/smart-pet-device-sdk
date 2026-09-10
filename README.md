@@ -19,6 +19,7 @@ hardcoded Wi-Fi creds, no NTP, no OTA, HTTP polling):
 | Updates | ArduinoOTA (LAN) + HTTP pull on the `ota` command (`spd_ota.h`) |
 | Config | all identity/creds in NVS as one CRC-checked entry (atomic write; a power cut can't half-update it), legacy per-key format auto-migrated, corrupt config falls back to factory defaults (`spd_config.h`, `spd_config_codec.h`) |
 | Power loss | HW brown-out detector resets before flash corruption; brown-out resets counted in RTC_NOINIT memory and reported as `brownouts` in status (`spd_brownout.h`) |
+| Kill switch | subscribes retained `kennel/{k}/_control` — in `safeMode` the device stops all actuation (scheduled + app command handlers) but keeps reporting; `safeModeActive()` for the sketch (`spd_device.h`) |
 
 Matches the TypeScript contract in **`smart-pet-mqtt`** exactly (`spd_topics.h` mirrors `topics.ts`).
 

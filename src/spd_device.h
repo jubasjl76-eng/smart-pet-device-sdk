@@ -124,6 +124,7 @@ class SmartPetDevice {
       s["uptimeS"] = (uint32_t)(millis() / 1000);
       if (brownout_.count) s["brownouts"] = brownout_.count;
       if (!store_.lastLoadOk()) s["configDefaulted"] = true;
+      if (safeMode_) s["safeMode"] = true;
       if (statusFill_) statusFill_(s);
     });
   }
@@ -163,6 +164,10 @@ class SmartPetDevice {
   ScheduleCache& schedule() { return sched_; }
   bool isOnline() { return wifi_.isConnected() && mqtt_.connected(); }
   bool inProvisioning() { return wifi_.inPortal(); }
+  // True while the kennel is halted via the fleet kill switch — a sketch can
+  // check this to blink an LED, freeze a display, etc. (actuation is already
+  // suppressed by the SDK).
+  bool safeModeActive() const { return safeMode_; }
 
  private:
   void handleConnectivity(bool online, bool timeOk) {
@@ -218,7 +223,8 @@ class SmartPetDevice {
 
   void tickSchedule() {
     if (sched_.size() == 0 || !scheduled_) return;
-    if (!time_.timeTrusted()) return;  // never fire a schedule on an unsynced clock
+    if (safeMode_) return;              // fleet kill switch — no scheduled actuation
+    if (!time_.timeTrusted()) return;   // never fire a schedule on an unsynced clock
     int mod = time_.minuteOfDay();
     if (mod < 0) return;
     long day = time_.dayIndex();
@@ -231,6 +237,7 @@ class SmartPetDevice {
   }
 
   void onMqtt(const String& topic, JsonObjectConst p) {
+    if (topic.endsWith("/_control")) { applyControl(p); return; }
     if (topic.endsWith("/audio")) {
       if (audioSignal_) audioSignal_(String((const char*)(p["kind"] | "")), p);
       return;
@@ -243,17 +250,36 @@ class SmartPetDevice {
     // Echo this command's trace context on every ack it produces (Phase 16).
     mqtt_.setAckTrace(p["traceparent"] | "", p["tracestate"] | "");
 
-    if (handleBuiltin(command, params, id)) return;
+    if (handleBuiltin(command, params, id)) return;  // restart/identify/ota/schedule_set/set_interval — always allowed
 
     auto it = handlers_.find(command);
     if (it == handlers_.end()) {
       mqtt_.publishAck(id, command, "rejected", "no handler");
       return;
     }
+    if (safeMode_) {  // fleet kill switch — app actuator handlers are suspended
+      mqtt_.publishAck(id, command, "rejected", "safe-mode");
+      return;
+    }
     bool ok = false;
     ok = it->second(params, id);
     mqtt_.publishAck(id, command, ok ? "ok" : "error");
     if (ok) publishStatus();
+  }
+
+  // Retained kennel/{k}/_control : {"safeMode":bool,"reason":str}. An empty /
+  // cleared retained message (safeMode absent) leaves safe mode.
+  void applyControl(JsonObjectConst p) {
+    bool now = p["safeMode"] | false;
+    if (now == safeMode_) return;
+    safeMode_ = now;
+    if (now) Serial.printf("[spd] FLEET SAFE MODE — %s\n", (const char*)(p["reason"] | "(no reason)"));
+    else Serial.println("[spd] fleet resumed");
+    String reason = p["reason"] | "";
+    publishEvent(now ? "safe_mode" : "safe_mode_cleared", [reason](JsonObject& d) {
+      if (reason.length()) d["reason"] = reason;
+    });
+    publishStatus();
   }
 
   bool handleBuiltin(const String& command, JsonObjectConst params, const String& id) {
@@ -358,6 +384,7 @@ class SmartPetDevice {
   CrashInfo bootCrash_{};
   bool crashReported_ = false;
   BrownoutInfo brownout_{};
+  bool safeMode_ = false;
 
   static constexpr uint32_t kTimeSaveEveryMs = 15UL * 60 * 1000;  // persist LKG every 15 min
   uint32_t lastTimeSaveMs_ = 0;
