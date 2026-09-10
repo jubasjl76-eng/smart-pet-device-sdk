@@ -20,6 +20,7 @@ hardcoded Wi-Fi creds, no NTP, no OTA, HTTP polling):
 | Config | all identity/creds in NVS as one CRC-checked entry (atomic write; a power cut can't half-update it), legacy per-key format auto-migrated, corrupt config falls back to factory defaults (`spd_config.h`, `spd_config_codec.h`) |
 | Power loss | HW brown-out detector resets before flash corruption; brown-out resets counted in RTC_NOINIT memory and reported as `brownouts` in status (`spd_brownout.h`) |
 | Kill switch | subscribes retained `kennel/{k}/_control` — in `safeMode` the device stops all actuation (scheduled + app command handlers) but keeps reporting; `safeModeActive()` for the sketch (`spd_device.h`) |
+| Memory guards | heap free / min / largest-block + stack high-water in every status; a `health` event on each ok↔low↔critical change; under critical pressure the SDK skips the app's optional status fill; debug builds panic on heap-integrity failure (`spd_health.h`) |
 
 Matches the TypeScript contract in **`smart-pet-mqtt`** exactly (`spd_topics.h` mirrors `topics.ts`).
 
