@@ -22,6 +22,7 @@
 #include "spd_ota.h"
 #include "spd_schedule.h"
 #include "spd_offline_journal.h"
+#include "spd_crash.h"
 
 #ifndef SPD_FW_VERSION
 #define SPD_FW_VERSION "0.1.0"
@@ -41,6 +42,8 @@ class SmartPetDevice {
   void begin() {
     Serial.begin(115200);
     delay(100);
+    bootCrash_ = readCrashInfo();
+    if (bootCrash_.isCrash) Serial.printf("[spd] recovered from a crash: %s\n", bootCrash_.reason);
     cfg_ = store_.load();
     if (cfg_.deviceType.isEmpty()) cfg_.deviceType = deviceType_;
 
@@ -142,8 +145,22 @@ class SmartPetDevice {
     } else {
       Serial.println("[spd] link up");
       publishStatus();
+      reportCrashOnce();
       if (journal_.isOpen()) flushJournal();
     }
+  }
+
+  // One `crash` event per boot that followed a panic / watchdog / brown-out.
+  void reportCrashOnce() {
+    if (!bootCrash_.isCrash || crashReported_ || !mqtt_.connected()) return;
+    mqtt_.publishEvent("crash", [this](JsonObject& d) {
+      d["reason"] = bootCrash_.reason;
+      d["rawReason"] = (int)bootCrash_.raw;
+      d["fw"] = SPD_FW_VERSION;
+      d["heapFree"] = (uint32_t)ESP.getFreeHeap();
+      d["minHeapFree"] = (uint32_t)ESP.getMinFreeHeap();
+    });
+    crashReported_ = true;
   }
 
   void flushJournal() {
@@ -304,6 +321,8 @@ class SmartPetDevice {
   bool otaBegun_ = false;
   uint32_t lastStatusMs_ = 0;
   uint32_t statusEveryMs_ = 30000;
+  CrashInfo bootCrash_{};
+  bool crashReported_ = false;
 };
 
 }  // namespace spd

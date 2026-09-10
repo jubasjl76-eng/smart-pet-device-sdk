@@ -14,6 +14,7 @@
 #include "spd_schedule.h"
 #include "spd_backoff.h"
 #include "spd_offline_journal.h"
+#include "spd_crash.h"
 #include "spd_time.h"
 #include "spd_wifi.h"
 #include "spd_mqtt.h"
