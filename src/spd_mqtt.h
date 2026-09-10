@@ -67,10 +67,19 @@ class MqttTransport {
     if (fill) { JsonObject data = doc["data"].to<JsonObject>(); fill(data); }
     return publishJson("event", doc);
   }
+  // Echo the current command's W3C Trace Context on its ack(s) so the
+  // command -> ack round trip links (Phase 16). Set from onMqtt before dispatch.
+  void setAckTrace(const String& traceparent, const String& tracestate) {
+    ackTraceparent_ = traceparent;
+    ackTracestate_ = tracestate;
+  }
+
   bool publishAck(const String& ackId, const String& command, const String& result, const String& detail = "") {
     JsonDocument doc; envelope(doc);
     doc["ackId"] = ackId; doc["command"] = command; doc["result"] = result;
     if (detail.length()) doc["detail"] = detail;
+    if (ackTraceparent_.length()) doc["traceparent"] = ackTraceparent_;
+    if (ackTracestate_.length()) doc["tracestate"] = ackTracestate_;
     return publishJson("ack", doc);
   }
   bool publishMetric(const String& metricLeaf, float value, const String& unit = "") {
@@ -133,6 +142,8 @@ class MqttTransport {
   MqttMessageCb onMessage_;
   Backoff backoff_{1000, 60000};
   uint32_t nextAttemptMs_ = 0;
+  String ackTraceparent_;
+  String ackTracestate_;
 };
 
 }  // namespace spd

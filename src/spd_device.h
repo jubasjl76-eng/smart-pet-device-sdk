@@ -209,6 +209,9 @@ class SmartPetDevice {
     String id = p["id"] | "";
     JsonObjectConst params = p["params"].as<JsonObjectConst>();
 
+    // Echo this command's trace context on every ack it produces (Phase 16).
+    mqtt_.setAckTrace(p["traceparent"] | "", p["tracestate"] | "");
+
     if (handleBuiltin(command, params, id)) return;
 
     auto it = handlers_.find(command);
