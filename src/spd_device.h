@@ -26,6 +26,7 @@
 #include "spd_offline_journal.h"
 #include "spd_crash.h"
 #include "spd_brownout.h"
+#include "spd_health.h"
 
 #ifndef SPD_FW_VERSION
 #define SPD_FW_VERSION "0.1.0"
@@ -78,6 +79,7 @@ class SmartPetDevice {
   void loop() {
     bool wifiUp = wifi_.poll();
     bool timeOk = time_.poll();
+    health_.poll();
 
     if (wifiUp && !otaBegun_) { ota_.begin(cfg_); otaBegun_ = true; }
     if (otaBegun_) ota_.loop();
@@ -96,6 +98,20 @@ class SmartPetDevice {
     if (online && time_.haveClockOffset() && !clockOffsetReported_) {
       clockOffsetReported_ = true;
       publishMetric("clockOffsetS", (float)time_.clockOffsetS(), "seconds");
+    }
+
+    // Memory pressure: one event on each verdict change (ok <-> low <-> critical).
+    if (online) {
+      HeapVerdict v = health_.verdict();
+      if (v != lastHeapVerdict_) {
+        lastHeapVerdict_ = v;
+        publishEvent("health", [this, v](JsonObject& d) {
+          d["heap"] = heapVerdictStr(v);
+          d["heapFree"] = health_.freeHeap();
+          d["heapLargest"] = health_.largestBlock();
+          d["stackMin"] = health_.minStack();
+        });
+      }
     }
 
     if (online && timeOk) tickSchedule();
@@ -122,10 +138,16 @@ class SmartPetDevice {
       s["fw"] = SPD_FW_VERSION;
       s["rssi"] = wifi_.rssi();
       s["uptimeS"] = (uint32_t)(millis() / 1000);
+      s["heapFree"] = health_.freeHeap();
+      s["heapMin"] = health_.minFreeHeap();
+      s["stackMin"] = health_.minStack();
       if (brownout_.count) s["brownouts"] = brownout_.count;
       if (!store_.lastLoadOk()) s["configDefaulted"] = true;
       if (safeMode_) s["safeMode"] = true;
-      if (statusFill_) statusFill_(s);
+      if (health_.degraded()) s["degraded"] = heapVerdictStr(health_.verdict());
+      // Under critical memory pressure, skip the app's optional status fill —
+      // it may allocate. Keep the device reporting rather than risk an OOM.
+      if (statusFill_ && !health_.critical()) statusFill_(s);
     });
   }
   void publishEvent(const String& event, std::function<void(JsonObject&)> fill = nullptr) {
@@ -168,6 +190,9 @@ class SmartPetDevice {
   // check this to blink an LED, freeze a display, etc. (actuation is already
   // suppressed by the SDK).
   bool safeModeActive() const { return safeMode_; }
+  // Memory head-room. A sketch can check `health().degraded()` before an
+  // allocation-heavy operation; the SDK already sheds its own optional work.
+  HealthMonitor& health() { return health_; }
 
  private:
   void handleConnectivity(bool online, bool timeOk) {
@@ -385,6 +410,8 @@ class SmartPetDevice {
   bool crashReported_ = false;
   BrownoutInfo brownout_{};
   bool safeMode_ = false;
+  HealthMonitor health_{};
+  HeapVerdict lastHeapVerdict_ = HeapVerdict::Ok;
 
   static constexpr uint32_t kTimeSaveEveryMs = 15UL * 60 * 1000;  // persist LKG every 15 min
   uint32_t lastTimeSaveMs_ = 0;
