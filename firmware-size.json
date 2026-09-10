@@ -1,0 +1,7 @@
+{
+  "_note": "Flash/RAM baseline per PlatformIO env — checked by smart-pet-ci/pio-ci.yml (size-check). Regenerate from a green CI run's job summary when a size change is intentional.",
+  "feeder": { "flash": 1072305, "ram": 52524 },
+  "door":   { "flash": 1835817, "ram": 65416 },
+  "scale":  { "flash": 1061121, "ram": 52212 },
+  "audio":  { "flash": 1090005, "ram": 52708 }
+}
