@@ -322,7 +322,7 @@ class SmartPetDevice {
       if (!url.length()) { mqtt_.publishAck(id, command, "rejected", "no url"); return true; }
       mqtt_.publishAck(id, command, "queued");
       bool ok = ota_.applyFromUrl(url, params["sha256"] | "");
-      if (!ok) mqtt_.publishAck(id, command, "error", "ota failed");
+      if (!ok) mqtt_.publishAck(id, command, "error", ota_.lastError().length() ? ota_.lastError() : "ota failed");
       return true;
     }
     if (command == "schedule_set") {
