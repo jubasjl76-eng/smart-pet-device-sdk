@@ -1,0 +1,17 @@
+name: Firmware static
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+  schedule:
+    - cron: '6 7 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  static:
+    uses: jubasjl76-eng/smart-pet-ci/.github/workflows/firmware-static.yml@main
+    with:
+      paths: "src test"
