@@ -10,4 +10,5 @@ jobs:
       # example-dir makes each env build examples/<env> (not always the feeder)
       example-dir: examples
       environments: '["feeder","door","scale","audio"]'
-      native-test-command: "./test/run_native.sh"
+      native-test-command: "pio test -e native -e native-san"
+      coverage-env: native-cov

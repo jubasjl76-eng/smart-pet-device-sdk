@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
-# Host-compile and run the freestanding SDK tests. No PlatformIO / Arduino needed.
+# Run the host unit tests (GoogleTest via PlatformIO).
+#   ./test/run_native.sh                     # env "native"
+#   ./test/run_native.sh -e native-san       # any pio test args
+# Needs PlatformIO (`pip install platformio` or `pipx install platformio`).
 set -euo pipefail
 cd "$(dirname "$0")/.."
-CXX="${CXX:-c++}"
-OUT="$(mktemp -d)/spd_tests"
-$CXX -std=c++17 -Wall -Wextra -Wpedantic -O2 test/test_native/test_main.cpp -o "$OUT"
-"$OUT"
+if [ "$#" -eq 0 ]; then
+  exec pio test -e native
+fi
+exec pio test "$@"
