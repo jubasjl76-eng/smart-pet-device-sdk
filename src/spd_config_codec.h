@@ -19,6 +19,17 @@ inline uint32_t crc32(const std::string& s) {
   return c ^ 0xFFFFFFFFu;
 }
 
+// 8-char uppercase hex — used for the trailing CRC (no snprintf / char[]).
+inline std::string hex8(uint32_t v) {
+  static const char* kHex = "0123456789ABCDEF";
+  std::string s(8, '0');
+  for (int i = 7; i >= 0; --i) {
+    s[i] = kHex[v & 0xF];
+    v >>= 4;
+  }
+  return s;
+}
+
 // Config fields, Arduino-String-free so the native tests can round-trip them.
 struct ConfigFields {
   std::string kennelId, deviceType, deviceId, wifiSsid, wifiPass, mqttHost,
@@ -77,9 +88,7 @@ inline std::string serializeConfig(const ConfigFields& f) {
                      "|" + enc(f.mqttHost) + "|" + std::to_string(f.mqttPort) + "|" +
                      enc(f.mqttUser) + "|" + enc(f.mqttPass) + "|" + enc(f.otaPassword) +
                      "|" + enc(f.timezone);
-  char crc[9];
-  std::snprintf(crc, sizeof(crc), "%08X", crc32(body));
-  return body + "|" + crc;
+  return body + "|" + hex8(crc32(body));
 }
 
 inline bool deserializeConfig(const std::string& blob, ConfigFields& f) {
@@ -88,9 +97,7 @@ inline bool deserializeConfig(const std::string& blob, ConfigFields& f) {
   if (parts[0] != "1") return false;
   const std::string& crcStr = parts.back();
   std::string body = blob.substr(0, blob.size() - crcStr.size() - 1);
-  char want[9];
-  std::snprintf(want, sizeof(want), "%08X", crc32(body));
-  if (crcStr != want) return false;
+  if (crcStr != hex8(crc32(body))) return false;
 
   using detail::dec;
   f.kennelId = dec(parts[1]);
