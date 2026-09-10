@@ -25,6 +25,7 @@
 #include "spd_schedule.h"
 #include "spd_offline_journal.h"
 #include "spd_crash.h"
+#include "spd_brownout.h"
 
 #ifndef SPD_FW_VERSION
 #define SPD_FW_VERSION "0.1.0"
@@ -46,7 +47,17 @@ class SmartPetDevice {
     delay(100);
     bootCrash_ = readCrashInfo();
     if (bootCrash_.isCrash) Serial.printf("[spd] recovered from a crash: %s\n", bootCrash_.reason);
+    brownout_ = brownoutBootCheck();
+    if (brownout_.thisBoot)
+      Serial.printf("[spd] brown-out reset (#%u since cold boot)\n", brownout_.count);
+
     cfg_ = store_.load();
+    if (!store_.lastLoadOk())
+      Serial.println("[spd] config unreadable/corrupt — starting from factory defaults");
+    else if (store_.lastMigrated()) {
+      Serial.println("[spd] upgrading config to the CRC-checked format");
+      store_.save(cfg_);
+    }
     if (cfg_.deviceType.isEmpty()) cfg_.deviceType = deviceType_;
 
     wifi_.begin();
@@ -111,6 +122,8 @@ class SmartPetDevice {
       s["fw"] = SPD_FW_VERSION;
       s["rssi"] = wifi_.rssi();
       s["uptimeS"] = (uint32_t)(millis() / 1000);
+      if (brownout_.count) s["brownouts"] = brownout_.count;
+      if (!store_.lastLoadOk()) s["configDefaulted"] = true;
       if (statusFill_) statusFill_(s);
     });
   }
@@ -344,6 +357,7 @@ class SmartPetDevice {
   uint32_t statusEveryMs_ = 30000;
   CrashInfo bootCrash_{};
   bool crashReported_ = false;
+  BrownoutInfo brownout_{};
 
   static constexpr uint32_t kTimeSaveEveryMs = 15UL * 60 * 1000;  // persist LKG every 15 min
   uint32_t lastTimeSaveMs_ = 0;
