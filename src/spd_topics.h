@@ -50,6 +50,7 @@ inline TopicParts parseTopic(const std::string& topic) {
   std::array<std::string, 5> seg;
   size_t idx = 0, start = 0;
   for (size_t i = 0; i <= topic.size(); ++i) {
+    // cppcheck-suppress containerOutOfBounds  ; short-circuits at i == size()
     if (i == topic.size() || topic[i] == '/') {
       if (idx >= 5) { return p; }  // too many segments
       seg[idx++] = topic.substr(start, i - start);
