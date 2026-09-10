@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 #include <cctype>
-#include <cstring>
 #include "../../src/spd_ota_util.h"
 
 using namespace spd;
@@ -37,7 +36,7 @@ TEST(OtaUtil, sha256HexEqualRejects) {
   EXPECT_FALSE(sha256HexEqual(kDigest, "z" + hex.substr(1))); // non-hex char
 
   uint8_t off[32];
-  std::memcpy(off, kDigest, 32);
+  for (int i = 0; i < 32; ++i) off[i] = kDigest[i];
   off[31] ^= 0x01;
   EXPECT_FALSE(sha256HexEqual(off, hex));  // one bit different
 }
