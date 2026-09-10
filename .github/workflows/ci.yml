@@ -13,4 +13,5 @@ jobs:
       native-test-command: "pio test -e native -e native-san"
       coverage-env: "native-cov"
       wokwi-env: "feeder"
+      size-check: true # flash/RAM report + -fstack-usage budget (Phase 19)
     secrets: inherit
