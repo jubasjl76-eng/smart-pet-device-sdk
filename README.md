@@ -17,7 +17,8 @@ hardcoded Wi-Fi creds, no NTP, no OTA, HTTP polling):
 | Scheduling | schedule cache persisted to NVS; fires on RTC time even with no cloud (`spd_schedule.h`) |
 | Outage | **offline journal** — actions recorded while dark, replayed as `offline_recovered` on reconnect (`spd_offline_journal.h`) |
 | Updates | ArduinoOTA (LAN) + HTTP pull on the `ota` command (`spd_ota.h`) |
-| Config | all identity/creds in NVS, provisioned once (`spd_config.h`) |
+| Config | all identity/creds in NVS as one CRC-checked entry (atomic write; a power cut can't half-update it), legacy per-key format auto-migrated, corrupt config falls back to factory defaults (`spd_config.h`, `spd_config_codec.h`) |
+| Power loss | HW brown-out detector resets before flash corruption; brown-out resets counted in RTC_NOINIT memory and reported as `brownouts` in status (`spd_brownout.h`) |
 
 Matches the TypeScript contract in **`smart-pet-mqtt`** exactly (`spd_topics.h` mirrors `topics.ts`).
 
