@@ -13,6 +13,8 @@
 #pragma once
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <cstdlib>
+#include <ctime>
 #include <functional>
 #include <map>
 #include "spd_config.h"
@@ -49,6 +51,10 @@ class SmartPetDevice {
 
     wifi_.begin();
     time_.begin(cfg_.timezone);
+    {  // seed the RTC from the last-known-good epoch so timestamps aren't 1970
+      String lkg = store_.getBlobString("time_lkg");
+      if (lkg.length()) time_.restoreLastKnown((time_t)strtoull(lkg.c_str(), nullptr, 10));
+    }
     mqtt_.begin([this](const String& t, JsonObjectConst p) { onMqtt(t, p); });
     otaBegun_ = false;
 
@@ -69,6 +75,17 @@ class SmartPetDevice {
 
     bool online = wifiUp && mqtt_.connected();
     handleConnectivity(online, timeOk);
+
+    // Persist last-known-good time so a power cut doesn't lose the clock, and
+    // report the restored-clock offset once after the first sync (A12 #16).
+    if (timeOk && millis() - lastTimeSaveMs_ > kTimeSaveEveryMs) {
+      lastTimeSaveMs_ = millis();
+      store_.putBlobString("time_lkg", String(time_.epochS()));
+    }
+    if (online && time_.haveClockOffset() && !clockOffsetReported_) {
+      clockOffsetReported_ = true;
+      publishMetric("clockOffsetS", (float)time_.clockOffsetS(), "seconds");
+    }
 
     if (online && timeOk) tickSchedule();
 
@@ -121,7 +138,7 @@ class SmartPetDevice {
     if (mqtt_.connected()) {
       publishEvent(kind, [amount](JsonObject& d) { d["amount"] = amount; });
     } else {
-      journal_.record(time_.epochS(), std::string(kind.c_str()), amount);
+      journal_.record(time_.timeUsable() ? time_.epochS() : 0, std::string(kind.c_str()), amount);
       persistJournal();
     }
   }
@@ -188,6 +205,7 @@ class SmartPetDevice {
 
   void tickSchedule() {
     if (sched_.size() == 0 || !scheduled_) return;
+    if (!time_.timeTrusted()) return;  // never fire a schedule on an unsynced clock
     int mod = time_.minuteOfDay();
     if (mod < 0) return;
     long day = time_.dayIndex();
@@ -326,6 +344,10 @@ class SmartPetDevice {
   uint32_t statusEveryMs_ = 30000;
   CrashInfo bootCrash_{};
   bool crashReported_ = false;
+
+  static constexpr uint32_t kTimeSaveEveryMs = 15UL * 60 * 1000;  // persist LKG every 15 min
+  uint32_t lastTimeSaveMs_ = 0;
+  bool clockOffsetReported_ = false;
 };
 
 }  // namespace spd

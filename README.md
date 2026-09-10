@@ -11,7 +11,7 @@ hardcoded Wi-Fi creds, no NTP, no OTA, HTTP polling):
 | Concern | SDK |
 |---|---|
 | Wi-Fi | STA from NVS; **SoftAP captive portal** provisioning if unset/failing — nothing hardcoded (`spd_wifi.h`) |
-| Time | NTP + POSIX TZ; device distrusts its clock until first sync (`spd_time.h`) |
+| Time | NTP + POSIX TZ; last-known-good epoch persisted to NVS + restored on boot; schedules refuse to fire until an NTP sync lands *this session* (`timeTrusted()`); first-sync clock offset reported as `clockOffsetS` (`spd_time.h`) |
 | Transport | MQTT on `kennel/{kennelId}/{deviceType}/{deviceId}/{leaf}`, LWT, QoS/retain per the contract, exponential-backoff reconnect (`spd_mqtt.h`, `spd_topics.h`) |
 | Commands | `command` → typed handler → auto `ack`; built-ins: `restart`, `ota`, `identify`, `schedule_set`, `set_interval` (`spd_device.h`) |
 | Scheduling | schedule cache persisted to NVS; fires on RTC time even with no cloud (`spd_schedule.h`) |
