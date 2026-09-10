@@ -40,6 +40,13 @@ inline std::string buildTopic(const std::string& kennelId, const std::string& de
   return "kennel/" + kennelId + "/" + deviceType + "/" + deviceId + "/" + leaf;
 }
 
+// Kennel-wide control channel (Phase 19 fleet kill switch, A12 #17). A single
+// retained message every device in the kennel subscribes to: {"safeMode":bool,
+// "reason":str}. In safe mode devices stop actuating but keep reporting.
+inline std::string controlTopic(const std::string& kennelId) {
+  return "kennel/" + kennelId + "/_control";
+}
+
 struct TopicParts {
   std::string kennelId, deviceType, deviceId, leaf;
   bool valid = false;
