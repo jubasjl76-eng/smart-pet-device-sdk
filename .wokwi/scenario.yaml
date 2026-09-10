@@ -1,0 +1,9 @@
+name: feeder-boot
+version: 1
+author: smart-pet
+
+# Fresh boot, no stored Wi-Fi creds -> the SDK brings up the provisioning
+# SoftAP and logs this line. Proves the image links, boots, and the SDK's
+# Wi-Fi + serial path runs on real(ish) silicon.
+steps:
+  - wait-serial: "[wifi] provisioning AP up:"

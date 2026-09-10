@@ -1,0 +1,6 @@
+[wokwi]
+version = 1
+# Built by `pio run -e feeder` (PLATFORMIO_SRC_DIR=examples/feeder). Paths are
+# relative to this file. The .elf lets Wokwi assemble the full flash image.
+firmware = "../.pio/build/feeder/firmware.bin"
+elf = "../.pio/build/feeder/firmware.elf"
