@@ -40,3 +40,18 @@ TEST(OtaUtil, sha256HexEqualRejects) {
   off[31] ^= 0x01;
   EXPECT_FALSE(sha256HexEqual(off, hex));  // one bit different
 }
+
+// Phase 21 (A11 — OTA CDN hardening): resumable-download helpers.
+TEST(OtaUtil, otaRangeHeader) {
+  EXPECT_EQ(otaRangeHeader(0), "bytes=0-");
+  EXPECT_EQ(otaRangeHeader(1024), "bytes=1024-");
+  EXPECT_EQ(otaRangeHeader(1234567), "bytes=1234567-");
+}
+
+TEST(OtaUtil, otaRetryDelayMsBacksOffExponentiallyAndCaps) {
+  EXPECT_EQ(otaRetryDelayMs(0, 1000, 30000), 1000u);
+  EXPECT_EQ(otaRetryDelayMs(1, 1000, 30000), 2000u);
+  EXPECT_EQ(otaRetryDelayMs(2, 1000, 30000), 4000u);
+  EXPECT_EQ(otaRetryDelayMs(10, 1000, 30000), 30000u);  // capped
+  EXPECT_EQ(otaRetryDelayMs(-1, 1000, 30000), 1000u);   // negative treated as 0
+}

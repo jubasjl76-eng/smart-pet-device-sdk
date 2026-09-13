@@ -7,6 +7,24 @@
 
 namespace spd {
 
+// Phase 21 (A11 — OTA CDN hardening): a single-shot GET of a multi-MB image
+// over a device's radio link stalls or drops often enough that a resumable
+// download is worth it — a dropped connection at 90% shouldn't mean
+// starting over at 0%. `otaRangeHeader` builds the HTTP Range value to
+// resume from `bytesWritten`; `otaRetryDelayMs` backs off between attempts
+// (exponential, capped) so a stalled CDN edge or a flaky AP gets a moment
+// before the next try instead of hammering it.
+inline std::string otaRangeHeader(size_t bytesWritten) {
+  return "bytes=" + std::to_string(bytesWritten) + "-";
+}
+
+inline uint32_t otaRetryDelayMs(int attempt, uint32_t baseMs = 1000, uint32_t capMs = 30000) {
+  if (attempt < 0) attempt = 0;
+  if (attempt > 20) attempt = 20;  // guard the shift below
+  uint64_t d = (uint64_t)baseMs << attempt;
+  return (uint32_t)(d > capMs ? capMs : d);
+}
+
 inline std::string toHexLower(const uint8_t* p, size_t n) {
   static const char* d = "0123456789abcdef";
   std::string s;
