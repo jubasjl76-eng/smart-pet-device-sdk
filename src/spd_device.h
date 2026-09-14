@@ -348,6 +348,25 @@ class SmartPetDevice {
       mqtt_.publishAck(id, command, "ok");
       return true;
     }
+    // MQTT device-credential rotation (Phase 21, A12 #20). Sent over the
+    // device's EXISTING (still-valid) connection, same pattern as `restart`:
+    // ack first — while the old credentials can still reach the broker —
+    // then persist and reboot; the normal boot path reconnects with
+    // whatever's in NVS, so no live credential swap on the open connection
+    // is needed.
+    if (command == "rotate_credentials") {
+      String user = params["mqttUser"] | "";
+      String pass = params["mqttPass"] | "";
+      if (!user.length() || !pass.length()) {
+        mqtt_.publishAck(id, command, "rejected", "missing mqttUser/mqttPass");
+        return true;
+      }
+      mqtt_.publishAck(id, command, "ok");
+      cfg_.mqttUser = user;
+      cfg_.mqttPass = pass;
+      store_.save(cfg_);
+      delay(200); ESP.restart(); return true;
+    }
     return false;
   }
 
